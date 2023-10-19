@@ -1,0 +1,115 @@
+Hit:1 http://deb.debian.org/debian bookworm InRelease
+Hit:2 http://deb.debian.org/debian bookworm-updates InRelease
+Hit:3 http://security.debian.org/debian-security bookworm-security InRelease
+Hit:4 https://baltocdn.com/helm/stable/debian all InRelease
+Hit:5 https://packages.cloud.google.com/apt kubernetes-xenial InRelease
+Reading package lists...
+1) Kubernetes-1.24
+2) Kubernetes-1.25
+3) Kubernetes-1.26
+4) Kubernetes-1.27
+5) Kubernetes-1.28 (latest)
+Install (5):
+INFO: Using latest
+You are going to install packages for kubernetes 1.28.2-00
+
+INFO: Packages are already installed
+
+INFO: Checking Kubernetes prerequisites for CPUs
+
+INFO: Found 2 CPUs
+
+INFO: Checking Kubernetes prerequisites for Memory
+
+INFO: Found 2013552 KB of Memory
+
+INFO: Setup Kubernetes prerequisites for Swap
+
+INFO: Disabling swap
+
+INFO: Swap devices need to be masked with systemctl
+  UNIT          LOAD   ACTIVE   SUB  DESCRIPTION
+● dev-sda3.swap masked inactive dead dev-sda3.swap
+
+LOAD   = Reflects whether the unit definition was properly loaded.
+ACTIVE = The high-level unit activation state, i.e. generalization of SUB.
+SUB    = The low-level unit activation state, values depend on unit type.
+1 loaded units listed.
+To show all installed unit files use 'systemctl list-unit-files'.
+
+INFO: Checking CRI (Container Runtime Interface) for Kubernetes
+
+INFO: Linking Kubernetes installed CNI to Containerd CNI directory: /var/lib/containerd/opt/bin (official debian path)
+'/var/lib/containerd/opt/bin/bandwidth' -> '/opt/cni/bin/bandwidth'
+'/var/lib/containerd/opt/bin/bridge' -> '/opt/cni/bin/bridge'
+'/var/lib/containerd/opt/bin/dhcp' -> '/opt/cni/bin/dhcp'
+'/var/lib/containerd/opt/bin/dummy' -> '/opt/cni/bin/dummy'
+'/var/lib/containerd/opt/bin/firewall' -> '/opt/cni/bin/firewall'
+'/var/lib/containerd/opt/bin/host-device' -> '/opt/cni/bin/host-device'
+'/var/lib/containerd/opt/bin/host-local' -> '/opt/cni/bin/host-local'
+'/var/lib/containerd/opt/bin/ipvlan' -> '/opt/cni/bin/ipvlan'
+'/var/lib/containerd/opt/bin/loopback' -> '/opt/cni/bin/loopback'
+'/var/lib/containerd/opt/bin/macvlan' -> '/opt/cni/bin/macvlan'
+'/var/lib/containerd/opt/bin/portmap' -> '/opt/cni/bin/portmap'
+'/var/lib/containerd/opt/bin/ptp' -> '/opt/cni/bin/ptp'
+'/var/lib/containerd/opt/bin/sbr' -> '/opt/cni/bin/sbr'
+'/var/lib/containerd/opt/bin/static' -> '/opt/cni/bin/static'
+'/var/lib/containerd/opt/bin/tuning' -> '/opt/cni/bin/tuning'
+'/var/lib/containerd/opt/bin/vlan' -> '/opt/cni/bin/vlan'
+'/var/lib/containerd/opt/bin/vrf' -> '/opt/cni/bin/vrf'
+
+INFO: You can use contaired as CRI (Container Runtime Interface) for Kubernetes
+
+INFO: Set runtine endpoint of crictl to containerd socket
+
+INFO: Container Runtimes Prerequisites
+
+INFO: Enable Forwarding IPv4 and letting iptables see bridged traffic
+
+INFO: Load kernel modules
+overlay
+br_netfilter
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+
+INFO: Apply kernel settings
+net.bridge.bridge-nf-call-iptables 	: Enabled
+net.bridge.bridge-nf-call-ip6tables 	: Enabled
+net.ipv4.ip_forward 	: Enabled
+deb [arch=amd64 signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main
+Hit:1 http://security.debian.org/debian-security bookworm-security InRelease
+Hit:2 http://deb.debian.org/debian bookworm InRelease
+Hit:3 http://deb.debian.org/debian bookworm-updates InRelease
+Hit:4 https://baltocdn.com/helm/stable/debian all InRelease
+Hit:5 https://packages.cloud.google.com/apt kubernetes-xenial InRelease
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+helm is already the newest version (3.13.1-1).
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+
+INFO: Heml - Adding some repository
+"cilium" already exists with the same configuration, skipping
+"antrea" already exists with the same configuration, skipping
+"prometheus-community" already exists with the same configuration, skipping
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "cilium" chart repository
+...Successfully got an update from the "antrea" chart repository
+...Successfully got an update from the "prometheus-community" chart repository
+Update Complete. ⎈Happy Helming!⎈
+
+INFO: Helm - You can find other repo here:  https://artifacthub.io
+
+INFO: Installed Kubertenes packages
+Desired=Unknown/Install/Remove/Purge/Hold
+| Status=Not/Inst/Conf-files/Unpacked/halF-conf/Half-inst/trig-aWait/Trig-pend
+|/ Err?=(none)/Reinst-required (Status,Err: uppercase=bad)
+||/ Name           Version      Architecture Description
++++-==============-============-============-=====================================
+hi  kubeadm        1.28.2-00    amd64        Kubernetes Cluster Bootstrapping Tool
+hi  kubectl        1.28.2-00    amd64        Kubernetes Command Line Tool
+hi  kubelet        1.28.2-00    amd64        Kubernetes Node Agent
+
+INFO: You are ready to go with : kubeadm init
