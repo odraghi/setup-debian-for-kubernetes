@@ -12,7 +12,7 @@ QUANTITY_OF_MEMORY_GB_MIN=2
 THIS_PROGRAM_VERSION=1.0.0
 THIS_PROGRAM=$0
 
-function copyright()
+copyright()
 {
    cat << EOF
     This program install the prerequisites to run and work with the kubernetes version of your choice.
@@ -34,12 +34,12 @@ function copyright()
 EOF
 }
 
-function this_version()
+this_version()
 {
    echo "Program: ${THIS_PROGRAM} version ${THIS_PROGRAM_VERSION}"
 }
 
-function this_help()
+this_help()
 {
    cat << EOF
 
@@ -75,7 +75,7 @@ OPTIONS
 EOF
 }
 
-function parse_args()
+parse_args()
 {
    POSITIONAL_ARGS=()
 
@@ -129,12 +129,12 @@ function parse_args()
    ARG_K8S_VERSION=${POSITIONAL_ARGS[0]}
 }
 
-function is_debian12()
+is_debian12()
 {
    return $(cat /etc/issue | grep -q "Debian GNU/Linux 12")
 }
 
-function setup_kubernetes_repo()
+setup_kubernetes_repo()
 {
    if [ ! -f /etc/apt/sources.list.d/kubernetes.list ] ; then
       log_info "Setup Kubernetes Official Repository"
@@ -148,12 +148,12 @@ function setup_kubernetes_repo()
    fi
 }
 
-function is_kubernetes_repo_exist()
+is_kubernetes_repo_exist()
 {
    return $( [ -f /etc/apt/sources.list.d/kubernetes.list ] )
 }
 
-function select_kubernetes_version()
+select_kubernetes_version()
 { 
   ([ ! -z ${ARG_K8S_VERSION} ] && [ ! -z ${ARG_LATEST} ]) && fatal_error "You can't request at the same time --latest and a specific older version."
 
