@@ -142,6 +142,7 @@ parse_args()
             ARG_INIT_CLUSTER="yes"
             ARG_PRODUCTION="yes"
             ARG_API_ENDPOINT="$2"
+            validate_arg_api_endpoint
             shift # past argument
             shift # past value
             ;;
@@ -177,12 +178,23 @@ parse_args()
       esac
    done
 
-   ARG_K8S_VERSION=${POSITIONAL_ARGS[0]}
+   [ ${#POSITIONAL_ARGS[@]} -eq 1 ] && ARG_K8S_VERSION=${POSITIONAL_ARGS[0]} && validate_arg_k8s_version
+}
+
+validate_arg_k8s_version()
+{
+     [[ "${ARG_K8S_VERSION}" =~ ^[0-9]+\.[0-9]+$ ]] || fatal_error "Invalid [kubernetes-version]   Expecting format look like this: 1.25"
+}
+
+validate_arg_api_endpoint()
+{
+    [[ "${ARG_API_ENDPOINT}" =~ ^.*[_]+.*$ ]] && fatal_error "Invalid --prod <FQDN_ENDPOINT>   Forbiden special character (_ underscrore)"
+    [[ "${ARG_API_ENDPOINT}" =~ ^[-a-zA-Z0-9\.]+$ ]] || fatal_error "Invalid --prod <FQDN_ENDPOINT>|<VIRTUAL_IP>  Forbiden special character"
 }
 
 is_debian12()
 {
-   return $(cat /etc/issue | grep -q "Debian GNU/Linux 12")
+   return $(grep -q "Debian GNU/Linux 12" /etc/issue)
 }
 
 setup_kubernetes_repo()
@@ -211,8 +223,7 @@ select_kubernetes_version()
   [ ${ARG_OLDER_K8S_VERSIONS:-no} == yes ] && QUANTITY_LIMIT=100
 
   VERSIONS=$(apt-cache madison kubectl \
-		| awk '{print $3}' \
-		| awk -F "." 'BEGIN {VERSION=x}   $2 != VERSION {print $1 "." $2 "." $3; VERSION = $2}'\
+		| awk -F "[. ]*" 'BEGIN {VERSION=x}  ($4 "." $5) != VERSION {print $4 "." $5 "." $6; VERSION = $4 "." $5 }' \
 		| head -${QUANTITY_LIMIT:-${QUANTITY_OF_K8S_VERSIONS}} \
 		| tac)
 
@@ -223,7 +234,7 @@ select_kubernetes_version()
   for VERSION in ${VERSIONS}; do
     ARRAY_VERSIONS+=(${VERSION})
     [ ${COUNT} -eq ${LATEST_VERSION_INDEX} ] && MESSAGE=" (latest)" || MESSAGE=""
-    [ ! -z ${ARG_K8S_VERSION} ] && echo ${VERSION} | grep -q ${ARG_K8S_VERSION} \
+    [ ! -z ${ARG_K8S_VERSION} ] &&  [[ ${VERSION} =~ ^${ARG_K8S_VERSION}\. ]] \
          && AUTO_INPUT=${COUNT} && MESSAGE="${MESSAGE} (requested version)"
     echo "${COUNT}) Kubernetes-$( echo ${VERSION} | sed 's/\.[0-9]*-.*$//')"${MESSAGE}
     ((COUNT++))
@@ -252,11 +263,7 @@ is_debian_package_installed()
 {
    PACKAGE_NAME=$1
    PACKAGE_VERSION=$2
-
-   DPKG_CHECK_OUPUT=$(dpkg -l ${PACKAGE_NAME} | grep ${PACKAGE_NAME})
-   [ ! -z ${PACKAGE_VERSION} ] && DPKG_CHECK_OUPUT=$(echo ${DPKG_CHECK_OUPUT} | grep ${PACKAGE_VERSION})
-   
-   return $( echo ${DPKG_CHECK_OUPUT} | awk '{print $1}' | grep -q "i" )
+   return $( dpkg -s ${PACKAGE_NAME} 2>/dev/null| grep -q "^Version: ${PACKAGE_VERSION}" )
 }
 
 is_kubernetes_pkg_installed()
@@ -316,14 +323,14 @@ EOF
 
 is_system_have_enought_cpu()
 {
-   CPU_COUNT=$(cat /proc/cpuinfo | grep processor | wc -l)
+   CPU_COUNT=$(grep "^$" /proc/cpuinfo | wc -l)
    log_info "Found ${CPU_COUNT} CPUs"
    return $( [ ${CPU_COUNT} -ge ${QUANTITY_OF_CPU_MIN} ] )
 }
 
 is_system_have_enought_memory()
 {
-   MEMORY_KB=$(cat /proc/meminfo | grep MemTotal | awk '{print $2}')
+   MEMORY_KB=$(awk '$1 == "MemTotal:" {print $2}' /proc/meminfo)
    log_info "Found ${MEMORY_KB} KB of Memory"
    MEMORY_GB=$(expr ${MEMORY_KB} / 1000000)
    return $( [ ${MEMORY_GB} -ge ${QUANTITY_OF_MEMORY_GB_MIN} ] )
