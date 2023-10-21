@@ -135,6 +135,7 @@ parse_args()
             ;;
          --cni)
             ARG_CNI="$2"
+            validate_arg_cni
             shift # past argument
             shift # past value
             ;;
@@ -146,7 +147,7 @@ parse_args()
             shift # past argument
             shift # past value
             ;;
-         --init-cluster )
+         --init )
             ARG_INIT_CLUSTER="yes"
             shift # past argument
             ;;
@@ -178,24 +179,61 @@ parse_args()
       esac
    done
 
+   # Set defaut values if not parsed
+   ARG_OLDER_K8S_VERSIONS=${ARG_OLDER_K8S_VERSIONS:-no}
+   ARG_LATEST=${ARG_LATEST:-no}
+   ARG_SKIP_HELM=${ARG_SKIP_HELM:-no}
+   ARG_INIT_CLUSTER=${ARG_INIT_CLUSTER:-no}
+   ARG_PRODUCTION=${ARG_PRODUCTION:-no}
+   ARG_CNI=${ARG_CNI:-calcio}
+
    [ ${#POSITIONAL_ARGS[@]} -eq 1 ] && ARG_K8S_VERSION=${POSITIONAL_ARGS[0]} && validate_arg_k8s_version
+   check_incompatible_args
+}
+
+check_incompatible_args()
+{
+  ([ ! -z ${ARG_K8S_VERSION} ] && [ ${ARG_LATEST} == yes ]) && fatal_error "You can't request at the same time --latest and a specific version."
+   [ ${ARG_CNI} == cilium ] && [ ${ARG_SKIP_HELM} == yes ] && fatal_error "Can't skip helm with '--cni cilium'"
+   [ ${ARG_CNI} == antrea ] && [ ${ARG_SKIP_HELM} == yes ] && fatal_error "Can't skip helm with '--cni antrea'"
+}
+
+validate_arg_cni()
+{
+   ([ -z ${ARG_CNI} ] || [[ "${ARG_CNI}" =~ ^- ]]) && fatal_error "Need a value with --cni   Expecting: calico,antrea or cilium"
+   [ ${ARG_CNI} == calico ] && return 
+   [ ${ARG_CNI} == antrea ] && return 
+   [ ${ARG_CNI} == cilium ] && return 
+   fatal_error "Invalid CNI   Expecting: calico,antrea or cilium"
 }
 
 validate_arg_k8s_version()
 {
-     [[ "${ARG_K8S_VERSION}" =~ ^[0-9]+\.[0-9]+$ ]] || fatal_error "Invalid [kubernetes-version]   Expecting format look like this: 1.25"
+   [[ "${ARG_K8S_VERSION}" =~ ^[0-9]+\.[0-9]+$ ]] || fatal_error "Invalid [kubernetes-version]   Expecting format look like this: 1.25"
 }
 
 validate_arg_api_endpoint()
 {
-    ([ -z ${ARG_API_ENDPOINT} ] || [[ "${ARG_API_ENDPOINT}" =~ ^- ]]) && fatal_error "Need a value with --prod   Expect <FQDN_ENDPOINT> or <VIRTUAL_IP>"
-    [[ "${ARG_API_ENDPOINT}" =~ ^.*[_]+.*$ ]] && fatal_error "Invalid --prod <FQDN_ENDPOINT>   Forbiden special character (_ underscrore)"
-    [[ "${ARG_API_ENDPOINT}" =~ ^[-a-zA-Z0-9\.]+$ ]] || fatal_error "Invalid --prod <FQDN_ENDPOINT>|<VIRTUAL_IP>  Forbiden special character"
+   ([ -z ${ARG_API_ENDPOINT} ] || [[ "${ARG_API_ENDPOINT}" =~ ^- ]]) && fatal_error "Need a value with --prod   Expect <FQDN_ENDPOINT> or <VIRTUAL_IP>"
+   [[ "${ARG_API_ENDPOINT}" =~ ^.*[_]+.*$ ]] && fatal_error "Invalid --prod <FQDN_ENDPOINT>   Forbiden special character (_ underscrore)"
+   [[ "${ARG_API_ENDPOINT}" =~ ^[-a-zA-Z0-9\.]+$ ]] || fatal_error "Invalid --prod <FQDN_ENDPOINT>|<VIRTUAL_IP>  Forbiden special character"
 }
 
 is_debian12()
 {
    return $(grep -q "Debian GNU/Linux 12" /etc/issue)
+}
+
+is_debian_package_installed()
+{
+   PACKAGE_NAME=$1
+   PACKAGE_VERSION=$2
+   return $( dpkg -s ${PACKAGE_NAME} 2>/dev/null| grep -q "^Version: ${PACKAGE_VERSION}" )
+}
+
+get_local_ip_address()
+{
+    ip -4 -br address list | awk -F '[/ ]*' '$2 == "UP" { print $3 }' | head -1
 }
 
 setup_kubernetes_repo()
@@ -219,9 +257,7 @@ is_kubernetes_repo_exist()
 
 select_kubernetes_version()
 { 
-  ([ ! -z ${ARG_K8S_VERSION} ] && [ ! -z ${ARG_LATEST} ]) && fatal_error "You can't request at the same time --latest and a specific older version."
-
-  [ ${ARG_OLDER_K8S_VERSIONS:-no} == yes ] && QUANTITY_LIMIT=100
+  [ ${ARG_OLDER_K8S_VERSIONS} == yes ] && QUANTITY_LIMIT=100
 
   VERSIONS=$(apt-cache madison kubectl \
 		| awk -F "[. ]*" 'BEGIN {VERSION=x}  ($4 "." $5) != VERSION {print $4 "." $5 "." $6; VERSION = $4 "." $5 }' \
@@ -243,8 +279,8 @@ select_kubernetes_version()
  
   echo -e "Install (${LATEST_VERSION_INDEX}):\c "
   [ ! -z ${ARG_K8S_VERSION} ] && [ -z ${AUTO_INPUT} ] && fatal_error "Kubernetes requested version not found. Maybe you need to increase the history of available version."
-  ([ ${ARG_LATEST:-no} == no ] && [ -z ${ARG_K8S_VERSION} ]) && read USER_INPUT  # Interactive input
-  [ ${ARG_LATEST:-no} == yes ] && echo ${LATEST_VERSION_INDEX}                   # Latest version
+  ([ ${ARG_LATEST} == no ] && [ -z ${ARG_K8S_VERSION} ]) && read USER_INPUT  # Interactive input
+  [ ${ARG_LATEST} == yes ] && echo ${LATEST_VERSION_INDEX}                   # Latest version
   [ ! -z ${AUTO_INPUT} ] && USER_INPUT=${AUTO_INPUT} && echo ${AUTO_INPUT}       # Specific version
 
   # If input is string
@@ -258,13 +294,6 @@ select_kubernetes_version()
   
   ((USER_INPUT--))
   VERSION_TO_INSTALL=${ARRAY_VERSIONS[${USER_INPUT}]}
-}
-
-is_debian_package_installed()
-{
-   PACKAGE_NAME=$1
-   PACKAGE_VERSION=$2
-   return $( dpkg -s ${PACKAGE_NAME} 2>/dev/null| grep -q "^Version: ${PACKAGE_VERSION}" )
 }
 
 is_kubernetes_pkg_installed()
@@ -385,8 +414,8 @@ setup_containerd()
    log_info "Containerd config - Load default configuration attributes"
    containerd config default > /etc/containerd/config.toml
    
-   log_info "Containerd config - Comply Debian, bin_dir = \"/usr/lib/cni\""
-   sed -i "s/^\(.*bin_dir = \).*/\1\"\/usr\/lib\/cni\"/" /etc/containerd/config.toml
+   log_info "Containerd config - Don't comply with Debian, bin_dir = \"/usr/lib/cni\" because CNI are going to the default /opt/cni/bin "
+   # sed -i "s/^\(.*bin_dir = \).*/\1\"\/usr\/lib\/cni\"/" /etc/containerd/config.toml
 
    log_info "Containerd config - Comply Debian, io.containerd.internal.v1.opt : path = /var/lib/containerd/opt"
    sed -i "s/^\( *path =\) \"\/opt\/containerd\"/\1 \"\/var\/lib\/containerd\/opt\"/" /etc/containerd/config.toml
@@ -423,23 +452,82 @@ install_helm()
 add_some_helm_repo()
 {
    log_info "Heml - Adding some repository"
-   helm repo add cilium https://helm.cilium.io/
-   helm repo add antrea https://charts.antrea.io
    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
    helm repo update
    log_info "Helm - You can find other repo here:  https://artifacthub.io"
 }
 
-create_cluster_single_controller()
+export_kubeconfig()
 {
-    OPTIONS=$*
-    kubeadm init ${OPTIONS}
+   EXPORT_CMD="export KUBECONFIG=/etc/kubernetes/admin.conf"
+   eval ${EXPORT_CMD}
+
+   grep -q "^${EXPORT_CMD}" /root/.profile && return
+
+   log_info "To be able to run 'kubectl' as root, we add this in /root/.profile  '${EXPORT_CMD}'"
+   echo ${EXPORT_CMD} >> /root/.profile
 }
 
-create_cluster_multi_controller()
+kubdeadm_init()
 {
-    OPTIONS=$*
-    kubeadm init --control-plane-endpoint ${ARG_API_ENDPOINT} --upload-certs ${OPTIONS}
+   log_info "Initializing Kubernetes cluster.."
+   OPTIONS=$*
+   [ ${ARG_PRODUCTION} == yes ] && kubdeadm_init_multi_controller ${OPTIONS}
+   [ ${ARG_PRODUCTION} == no ]  && kubdeadm_init_single_controller ${OPTIONS}
+}
+
+kubdeadm_init_single_controller()
+{
+   OPTIONS=$*
+   LOCAL_IP_ADDRESS=$(get_local_ip_address)
+   kubeadm init --apiserver-advertise-address ${LOCAL_IP_ADDRESS} ${OPTIONS} || exit 3
+}
+
+kubdeadm_init_multi_controller()
+{
+   OPTIONS=$*
+   kubeadm init --control-plane-endpoint ${ARG_API_ENDPOINT} --upload-certs ${OPTIONS} || exit 3
+}
+
+install_cni()
+{
+   [ ${ARG_CNI} = calico ] && install_cni_calico
+   [ ${ARG_CNI} = antrea ] && install_cni_antrea
+   [ ${ARG_CNI} = cilium ] && install_cni_cilium
+}
+
+install_cni_calico()
+{
+   log_info "Installing CNI - Calico"
+   kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/calico.yaml
+}
+
+install_cni_antrea()
+{
+   log_info "Installing CNI - Antrea"
+   helm repo add antrea https://charts.antrea.io
+   helm repo update antrea
+   helm install antrea antrea/antrea --namespace kube-system
+}
+
+install_cni_cilium()
+{
+   log_info "Installing CNI - Cilium"
+
+   VERSION_CILIUM_STABLE=$(curl -s https://raw.githubusercontent.com/cilium/cilium/main/stable.txt)
+   API_SERVER_PORT=6443
+
+   helm repo add cilium https://helm.cilium.io/
+   helm repo update cilium
+   helm install cilium cilium/cilium --version ${VERSION_CILIUM_STABLE} \
+       --namespace kube-system \
+       --set kubeProxyReplacement=true \
+       --set k8sServiceHost=${ARG_API_ENDPOINT:-${LOCAL_IP_ADDRESS}} \
+       --set k8sServicePort=${API_SERVER_PORT}
+
+   log_warn "Humm.. seems something don't work well with cilium"
+   log_warn "Check inter pod communication: ping OK, tcp KO"
+   log_warn "Check cilium-health status  Look at agent communication!!"
 }
 
 log_info()
@@ -483,11 +571,33 @@ fi
 
 kubernetes_prerequisites
 
-[ ${ARG_SKIP_HELM:-no} == no ] && (is_hemld_installed || install_helm) && add_some_helm_repo
+([ ${ARG_SKIP_HELM} == no ]) && (is_hemld_installed || install_helm) && add_some_helm_repo
 
-log_info "Installed Kubertenes packages"
+log_info "Installed Kubernetes packages"
 dpkg -l		kubelet kubeadm kubectl
 
-[ ${ARG_INIT_CLUSTER:-no} == no ]  && log_info "You are ready to go with : kubeadm init"
-[ ${ARG_INIT_CLUSTER:-no} == yes ] && log_info "Initializing Kubernentes cluster.."
+export_kubeconfig
 
+[ ${ARG_INIT_CLUSTER} == no ] && log_info "You are ready to go with : kubeadm init" && exit
+
+[ ${ARG_CNI} == cilium ] && kubdeadm_init --skip-phases=addon/kube-proxy || kubdeadm_init
+
+install_cni
+
+log_warn "To start using your cluster as  <root>          You to need to re-connect or run:  export KUBECONFIG=/etc/kubernetes/admin.conf"
+log_warn "To start using your cluster as  <regular user>  Please scroll-up (Ctrl+Shit Arrow-up) to see what to do"
+
+cat << EOF
+
+   To start using your cluster, please scroll-up (Ctrl+Shit Arrow-up) to see what to do.
+
+   Notice: For root user we have already added the export in /root/.profile
+
+   To join other nodes in the cluster you must install the same version of kubernetes.
+   To do that you can run this on them :
+      1. ${THIS_PROGRAM}    -Without --init or --prod
+      2. kubeadm --join     - Please scroll-up (Ctrl+Shit Arrow-up) to see args to use
+
+   Have good time with Kubernetes.
+
+EOF
