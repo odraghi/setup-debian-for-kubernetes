@@ -188,6 +188,7 @@ validate_arg_k8s_version()
 
 validate_arg_api_endpoint()
 {
+    ([ -z ${ARG_API_ENDPOINT} ] || [[ "${ARG_API_ENDPOINT}" =~ ^- ]]) && fatal_error "Need a value with --prod   Expect <FQDN_ENDPOINT> or <VIRTUAL_IP>"
     [[ "${ARG_API_ENDPOINT}" =~ ^.*[_]+.*$ ]] && fatal_error "Invalid --prod <FQDN_ENDPOINT>   Forbiden special character (_ underscrore)"
     [[ "${ARG_API_ENDPOINT}" =~ ^[-a-zA-Z0-9\.]+$ ]] || fatal_error "Invalid --prod <FQDN_ENDPOINT>|<VIRTUAL_IP>  Forbiden special character"
 }
