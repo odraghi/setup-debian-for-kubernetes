@@ -47,26 +47,61 @@ this_help()
 
 DESCRIPTION
 
-    This program install the prerequisites to run and work with the kubernetes.
-    By defaut the program list available kubernetes version and ask you which one you want.
+   This program install the prerequisites to run and work with the kubernetes.
+   By defaut the program list available kubernetes version and ask you which one you want.
+   
+   To join other nodes in the cluster you must install the same version of kubernetes.
+   To do that you would need to run on those server :
+      1. ${THIS_PROGRAM}    - Without initialize options (--init or --prod)
+      2. kubeadm --join     - With options you get at the end of the initialize of the first node
 
-UNATTENDED INSTALL
+UNATTENDED INSTALL OF TOOLS AND PREREQUISITES
 
-    There is three way for unattended installation:
+
       ${THIS_PROGRAM} 1.27
       ${THIS_PROGRAM} --latest
       ${THIS_PROGRAM} --older 1.24 
 
-OPTIONS
+      You can run <kubeadm init> yourself at the end.
+
+UNATTENDED INITIALIZE CLUSTER
+
+      ${THIS_PROGRAM} 1.27 --prod cluster-001.localdomain
+      ${THIS_PROGRAM} 1.27 --prod 192.168.10.1
+      ${THIS_PROGRAM} --latest --init
+      ${THIS_PROGRAM} --older 1.24 --init
+
+      ${THIS_PROGRAM} --latest --init -cni calico --skip-heml
+
+OPTIONS: FOR KUBERNETES VERSION
+
      --latest        Install the latest version of Kubernetes.
 
      --older         Allow older version of available Kubernetes version.
                      By default you can only install one of the ${QUANTITY_OF_K8S_VERSIONS} latest versions.
 
-     --skip-heml     Skip HELM install. You should use that for Production node.
+OPTIONS: FOR ADDITIONAL TOOLS
+
+     --skip-heml     Skip HELM install.
+                     You should use this option for a production node. 
+
+OPTIONS: TO INITIALIZE CLUSTER
+
+     --init                                 Initialize Kubernetes cluster.
+
+     --prod <FQDN_ENDPOINT>|<VIRTUAL_IP>    Initialize Kubernetes cluster ready for production with multi controller nodes.
+
+                                            <FQDN_ENDPOINT> This name must be in your DNS Server
+                                                            or in /etc/hosts of all nodes (controllers and workers).
+
+                                            <VIRTUAL_IP>    If you have configure a loadbalancer for your controle plane.
+
+     --cni  <CNI>                           CNI for your Kubernetes cluster (calico, cilium or antrea).
+                                            Default CNI is calcio.
+
+OPTIONS: USER FRIENDLY
 
      -s, --slow      That let time for humans reading what's happened (INFO/WARNING messages)
-
      -h, --help      Show this help.
 
 	  -v, --version       Show this program version.
@@ -96,6 +131,22 @@ parse_args()
             ;;
          --skip-helm)
             ARG_SKIP_HELM="yes"
+            shift # past argument
+            ;;
+         --cni)
+            ARG_CNI="$2"
+            shift # past argument
+            shift # past value
+            ;;
+         --prod)
+            ARG_INIT_CLUSTER="yes"
+            ARG_PRODUCTION="yes"
+            ARG_API_ENDPOINT="$2"
+            shift # past argument
+            shift # past value
+            ;;
+         --init-cluster )
+            ARG_INIT_CLUSTER="yes"
             shift # past argument
             ;;
          -s|--slow)
