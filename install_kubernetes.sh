@@ -430,6 +430,18 @@ add_some_helm_repo()
    log_info "Helm - You can find other repo here:  https://artifacthub.io"
 }
 
+create_cluster_single_controller()
+{
+    OPTIONS=$*
+    kubeadm init ${OPTIONS}
+}
+
+create_cluster_multi_controller()
+{
+    OPTIONS=$*
+    kubeadm init --control-plane-endpoint ${ARG_API_ENDPOINT} --upload-certs ${OPTIONS}
+}
+
 log_info()
 {
    echo -e "\nINFO: $*"
@@ -471,12 +483,11 @@ fi
 
 kubernetes_prerequisites
 
-if [ ${ARG_SKIP_HELM:-no} == no ]; then
-   is_hemld_installed || install_helm
-   add_some_helm_repo
-fi
+[ ${ARG_SKIP_HELM:-no} == no ] && (is_hemld_installed || install_helm) && add_some_helm_repo
 
 log_info "Installed Kubertenes packages"
 dpkg -l		kubelet kubeadm kubectl
 
-log_info "You are ready to go with : kubeadm init"
+[ ${ARG_INIT_CLUSTER:-no} == no ]  && log_info "You are ready to go with : kubeadm init"
+[ ${ARG_INIT_CLUSTER:-no} == yes ] && log_info "Initializing Kubernentes cluster.."
+
