@@ -87,18 +87,22 @@ OPTIONS: FOR ADDITIONAL TOOLS
 
 OPTIONS: TO INITIALIZE CLUSTER
 
-     --init                                 Initialize Kubernetes cluster.
+     --init                                  Initialize Kubernetes cluster.
 
-     --prod <FQDN_ENDPOINT>|<VIRTUAL_IP>    Initialize Kubernetes cluster ready for production with multi controller nodes.
+     --prod <FQDN_ENDPOINT>|<VIRTUAL_IP>     Initialize Kubernetes cluster ready for production with multi controller nodes.
 
-                                            <FQDN_ENDPOINT> This name must be in your DNS Server
+                                             <FQDN_ENDPOINT> This name must be in your DNS Server
                                                             or in /etc/hosts of all nodes (controllers and workers).
 
-                                            <VIRTUAL_IP>    If you have configure a loadbalancer for your controle plane.
+                                             <VIRTUAL_IP>    If you have configure a loadbalancer for your controle plane.
 
-     --cni  <CNI>                           CNI for your Kubernetes cluster (calico, cilium or antrea).
-                                            Default CNI is calico.
-
+     --cni  <CNI>                            CNI for your Kubernetes cluster (calico, cilium or antrea).
+                                             Default CNI is calico.
+  
+     --pod-network-cidr <POD_NETWORK_CIDR>  Specify range of IP addresses for the pod network.
+                                            If set, the control plane will automatically allocate CIDRs for every node.
+                                            This is mandatory for some CNI (only antrea for now..)
+                                       
 OPTIONS: USER FRIENDLY
 
      -s, --slow      That let time for humans reading what's happened (INFO/WARNING messages)
@@ -136,6 +140,13 @@ parse_args()
          --cni)
             ARG_CNI="$2"
             validate_arg_cni
+            shift # past argument
+            shift # past value
+            ;;
+         --pod-network-cidr)
+            ARG_POD_NETWORK="yes"
+            ARG_POD_NETWORK_CIDR="$2"
+            validate_arg_pod_network_cidr
             shift # past argument
             shift # past value
             ;;
@@ -186,6 +197,8 @@ parse_args()
    ARG_INIT_CLUSTER=${ARG_INIT_CLUSTER:-no}
    ARG_PRODUCTION=${ARG_PRODUCTION:-no}
    ARG_CNI=${ARG_CNI:-calico}
+   ARG_POD_NETWORK=${ARG_POD_NETWORK:-no}
+   ARG_POD_NETWORK_CIDR=${ARG_POD_NETWORK_CIDR:-10.244.0.0/12}
 
    [ ${#POSITIONAL_ARGS[@]} -eq 1 ] && ARG_K8S_VERSION=${POSITIONAL_ARGS[0]} && validate_arg_k8s_version
    check_incompatible_args
@@ -205,6 +218,12 @@ validate_arg_cni()
    [ ${ARG_CNI} == antrea ] && return 
    [ ${ARG_CNI} == cilium ] && return 
    fatal_error "Invalid CNI   Expecting: calico,antrea or cilium"
+}
+
+validate_arg_pod_network_cidr()
+{
+   ([ -z ${ARG_POD_NETWORK_CIDR} ] || [[ "${ARG_POD_NETWORK_CIDR}" =~ ^- ]]) && fatal_error "Need a <CIDR> with --pod-network-cidr   Expecting format: 10.244.0.0/12"
+   [[ "${ARG_POD_NETWORK_CIDR}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+$ ]] || fatal_error "Invalid <CIDR> with --pod-network-cidr    Expecting format: 10.244.0.0/12"
 }
 
 validate_arg_k8s_version()
@@ -471,7 +490,11 @@ export_kubeconfig()
 kubdeadm_init()
 {
    log_info "Initializing Kubernetes cluster.."
-   OPTIONS=$*
+   unset OPTIONS
+   [ ${ARG_CNI} == calico ] && OPTIONS="${OPTIONS}"
+   [ ${ARG_CNI} == cilium ] && OPTIONS="${OPTIONS} --skip-phases=addon/kube-proxy"
+   ([ ${ARG_CNI} == antrea ] || [ ${ARG_POD_NETWORK} == yes ]) && OPTIONS="${OPTIONS} --pod-network-cidr=${ARG_POD_NETWORK_CIDR}"
+
    [ ${ARG_PRODUCTION} == yes ] && kubdeadm_init_multi_controller ${OPTIONS}
    [ ${ARG_PRODUCTION} == no ]  && kubdeadm_init_single_controller ${OPTIONS}
 }
@@ -500,6 +523,11 @@ install_cni_calico()
 {
    log_info "Installing CNI - Calico"
    kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/calico.yaml
+}
+
+antrea_prerequisites()
+{
+   apt install -y openvswitch-switch openvswitch-common openvswitch-switch-dpdk
 }
 
 install_cni_antrea()
@@ -578,10 +606,11 @@ dpkg -l		kubelet kubeadm kubectl
 
 export_kubeconfig
 
+[ ${ARG_CNI} == antrea ] && antrea_prerequisites
+
 [ ${ARG_INIT_CLUSTER} == no ] && log_info "You are ready to go with : kubeadm" && exit
 
-[ ${ARG_CNI} == cilium ] && kubdeadm_init --skip-phases=addon/kube-proxy || kubdeadm_init
-
+kubdeadm_init
 install_cni
 
 log_warn "To start using your cluster as  <root>          You to need to re-connect or run:  export KUBECONFIG=/etc/kubernetes/admin.conf"
