@@ -97,7 +97,7 @@ OPTIONS: TO INITIALIZE CLUSTER
                                             <VIRTUAL_IP>    If you have configure a loadbalancer for your controle plane.
 
      --cni  <CNI>                           CNI for your Kubernetes cluster (calico, cilium or antrea).
-                                            Default CNI is calcio.
+                                            Default CNI is calico.
 
 OPTIONS: USER FRIENDLY
 
@@ -185,7 +185,7 @@ parse_args()
    ARG_SKIP_HELM=${ARG_SKIP_HELM:-no}
    ARG_INIT_CLUSTER=${ARG_INIT_CLUSTER:-no}
    ARG_PRODUCTION=${ARG_PRODUCTION:-no}
-   ARG_CNI=${ARG_CNI:-calcio}
+   ARG_CNI=${ARG_CNI:-calico}
 
    [ ${#POSITIONAL_ARGS[@]} -eq 1 ] && ARG_K8S_VERSION=${POSITIONAL_ARGS[0]} && validate_arg_k8s_version
    check_incompatible_args
@@ -491,9 +491,9 @@ kubdeadm_init_multi_controller()
 
 install_cni()
 {
-   [ ${ARG_CNI} = calico ] && install_cni_calico
-   [ ${ARG_CNI} = antrea ] && install_cni_antrea
-   [ ${ARG_CNI} = cilium ] && install_cni_cilium
+   [ ${ARG_CNI} == calico ] && install_cni_calico
+   [ ${ARG_CNI} == antrea ] && install_cni_antrea
+   [ ${ARG_CNI} == cilium ] && install_cni_cilium
 }
 
 install_cni_calico()
@@ -578,14 +578,13 @@ dpkg -l		kubelet kubeadm kubectl
 
 export_kubeconfig
 
-[ ${ARG_INIT_CLUSTER} == no ] && log_info "You are ready to go with : kubeadm init" && exit
+[ ${ARG_INIT_CLUSTER} == no ] && log_info "You are ready to go with : kubeadm" && exit
 
 [ ${ARG_CNI} == cilium ] && kubdeadm_init --skip-phases=addon/kube-proxy || kubdeadm_init
 
 install_cni
 
 log_warn "To start using your cluster as  <root>          You to need to re-connect or run:  export KUBECONFIG=/etc/kubernetes/admin.conf"
-log_warn "To start using your cluster as  <regular user>  Please scroll-up (Ctrl+Shit Arrow-up) to see what to do"
 
 cat << EOF
 
