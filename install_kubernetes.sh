@@ -552,9 +552,17 @@ install_cni_cilium()
        --set kubeProxyReplacement=true \
        --set k8sServiceHost=${ARG_API_ENDPOINT:-${LOCAL_IP_ADDRESS}} \
        --set k8sServicePort=${API_SERVER_PORT}
+      #  --set clusterPoolIPv4PodCIDRList=${ARG_POD_NETWORK_CIDR} \
+
+   log_info "Installing Cilium cli - /usr/local/bin/cilium"
+   curl -L --remote-name-all https://github.com/cilium/cilium-cli/releases/latest/download/cilium-linux-amd64.tar.gz{,.sha256sum}
+   sha256sum --check cilium-linux-amd64.tar.gz.sha256sum \
+      && tar xzvfC cilium-linux-amd64.tar.gz /usr/local/bin \
+      && rm cilium-linux-amd64.tar.gz{,.sha256sum}
 
    log_warn "Humm.. seems something don't work well with cilium"
    log_warn "Check inter pod communication: ping OK, tcp KO"
+   log_warn "Pod can't reach dns"
    log_warn "Check cilium-health status  Look at agent communication!!"
 }
 
