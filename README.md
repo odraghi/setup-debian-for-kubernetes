@@ -18,7 +18,7 @@ As root
 bash install_kubernetes.sh
 ```
 
-Or as a privileged user
+Or as a un-privileged user
 ```bash
 sudo bash install_kubernetes.sh
 ```
