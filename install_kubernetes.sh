@@ -9,7 +9,7 @@ QUANTITY_OF_K8S_VERSIONS=5
 QUANTITY_OF_CPU_MIN=2
 QUANTITY_OF_MEMORY_GB_MIN=2
 
-THIS_PROGRAM_VERSION=2.0.0
+THIS_PROGRAM_VERSION=2.1.0
 THIS_PROGRAM=$0
 
 copyright()
@@ -605,13 +605,19 @@ fatal_error()
    exit 2
 }
 
-## Main
+this_script_prerequisites()
+{
+   is_debian_package_installed curl || apt-get install -y curl
+   is_debian_package_installed gpg || apt-get install -y gpg
+}
 
+## Main
+this_script_prerequisites
 parse_args $*
 
 is_debian12 || fatal_error "This script is only tested for Debian12"
 
-[ ! is_kubernetes_repo_exist ] && setup_kubernetes_repo || apt-get update
+is_kubernetes_repo_exist && apt-get update || setup_kubernetes_repo
 
 select_kubernetes_version
 log_info "Installing kubernetes ${VERSION_TO_INSTALL}"
