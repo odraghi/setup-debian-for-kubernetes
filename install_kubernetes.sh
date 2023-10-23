@@ -90,15 +90,22 @@ OPTIONS: TO INITIALIZE CLUSTER
 
      --init                                  Initialize Kubernetes cluster.
 
-     --prod <FQDN_ENDPOINT>|<VIRTUAL_IP>     Initialize Kubernetes cluster ready for production with multi controller nodes.
+     --prod <FQDN_ENDPOINT>|<VIRTUAL_IP>     Initialize Kubernetes cluster ready for production.
+                                             With this option you can then join other controller nodes.
+                                             A minimum of 3 controllers is advised for production cluster.
 
                                              <FQDN_ENDPOINT> This name must be in your DNS Server
                                                             or in /etc/hosts of all nodes (controllers and workers).
 
                                              <VIRTUAL_IP>    If you have configure a loadbalancer for your controle plane.
 
-     --cni  <CNI>                            CNI for your Kubernetes cluster (calico, cilium or antrea).
+     --cni  <CNI>                            CNI for your Kubernetes cluster 'calico' or 'antrea' are working.
                                              Default CNI is calico.
+
+                                    Notice:
+                                             I have issue with pod communication when using 'cilium'.
+                                             'cilium' can be install if you add the option --force
+                                             But it's only for my troubleshooting purpose. 
   
      --pod-network-cidr <POD_NETWORK_CIDR>  Specify range of IP addresses for the pod network.
                                             If set, the control plane will automatically allocate CIDRs for every node.
@@ -106,11 +113,10 @@ OPTIONS: TO INITIALIZE CLUSTER
                                        
 OPTIONS: USER FRIENDLY
 
-     -s, --slow      That let time for humans reading what's happened (INFO/WARNING messages)
-     -h, --help      Show this help.
-
-	  -v, --version       Show this program version.
-	  -c, --copyright     Show this program copyright.
+     -s, --slow          Let times for humans reading what's is going on (INFO/WARNING messages)
+     -h, --help          Show this help.
+     -v, --version       Show this program version.
+     -c, --copyright     Show this program copyright.
 
 EOF
 }
@@ -159,8 +165,12 @@ parse_args()
             shift # past argument
             shift # past value
             ;;
-         --init )
+         --init)
             ARG_INIT_CLUSTER="yes"
+            shift # past argument
+            ;;
+         --force)
+            ARG_FORCE="yes"
             shift # past argument
             ;;
          -s|--slow)
@@ -198,6 +208,7 @@ parse_args()
    ARG_INIT_CLUSTER=${ARG_INIT_CLUSTER:-no}
    ARG_PRODUCTION=${ARG_PRODUCTION:-no}
    ARG_CNI=${ARG_CNI:-calico}
+   ARG_FORCE=${ARG_FORCE:-no}
    ARG_POD_NETWORK=${ARG_POD_NETWORK:-no}
    ARG_POD_NETWORK_CIDR=${ARG_POD_NETWORK_CIDR:-10.244.0.0/12}
 
@@ -207,6 +218,12 @@ parse_args()
 
 check_incompatible_args()
 {
+   [ ${ARG_CNI} == cilium ] && [ ${ARG_FORCE} == no ] \
+      && fatal_error "The install with '--cni cilium' are not stable.\n\n" \
+                     "Notice:\n\t" \
+                     "My tests with cilium failed. I have issue with inter pod communication.\n\t" \
+                     "Nevertheless, if you want to try cilium, you can use --force"
+  
   ([ ! -z ${ARG_K8S_VERSION} ] && [ ${ARG_LATEST} == yes ]) \
       && fatal_error "You can't request at the same time --latest and a specific version."
    
