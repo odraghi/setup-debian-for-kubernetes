@@ -83,7 +83,8 @@ OPTIONS: FOR KUBERNETES VERSION
 OPTIONS: FOR ADDITIONAL TOOLS
 
      --skip-heml     Skip HELM install.
-                     You should use this option for a production node. 
+                     Notice that some CNI require heml for the install.
+                     You could use this option for nodes that would be join to a cluster. 
 
 OPTIONS: TO INITIALIZE CLUSTER
 
@@ -206,9 +207,12 @@ parse_args()
 
 check_incompatible_args()
 {
-  ([ ! -z ${ARG_K8S_VERSION} ] && [ ${ARG_LATEST} == yes ]) && fatal_error "You can't request at the same time --latest and a specific version."
-   [ ${ARG_CNI} == cilium ] && [ ${ARG_SKIP_HELM} == yes ] && fatal_error "Can't skip helm with '--cni cilium'"
-   [ ${ARG_CNI} == antrea ] && [ ${ARG_SKIP_HELM} == yes ] && fatal_error "Can't skip helm with '--cni antrea'"
+  ([ ! -z ${ARG_K8S_VERSION} ] && [ ${ARG_LATEST} == yes ]) \
+      && fatal_error "You can't request at the same time --latest and a specific version."
+   
+   [ ${ARG_SKIP_HELM} == yes ] && [ ${ARG_INIT_CLUSTER} == yes ] \
+      && ( [ ${ARG_CNI} == cilium ] || [ ${ARG_CNI} == antrea ] ) \
+      && fatal_error "Can't skip helm to init a cluster with '--cni ${ARG_CNI}'"
 }
 
 validate_arg_cni()
