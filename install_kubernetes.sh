@@ -313,7 +313,7 @@ select_kubernetes_version()
     [ ${COUNT} -eq ${LATEST_VERSION_INDEX} ] && MESSAGE=" (latest)" || MESSAGE=""
     [ ! -z ${ARG_K8S_VERSION} ] &&  [[ ${VERSION} =~ ^${ARG_K8S_VERSION}\. ]] \
          && AUTO_INPUT=${COUNT} && MESSAGE="${MESSAGE} (requested version)"
-    echo "${COUNT}) Kubernetes-$( echo ${VERSION} | sed 's/\.[0-9]*-.*$//')"${MESSAGE}
+    echo "${COUNT}) Kubernetes-${VERSION%.*}${MESSAGE}"
     ((COUNT++))
   done
  
@@ -482,7 +482,7 @@ is_hemld_installed()
 install_helm()
 {
    log_info "Installing Heml"
-   curl https://baltocdn.com/helm/signing.asc | gpg --dearmor --yes -o /usr/share/keyrings/helm.gpg
+   curl -fsSL https://baltocdn.com/helm/signing.asc | gpg --dearmor --yes -o /usr/share/keyrings/helm.gpg
    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" \
          | tee /etc/apt/sources.list.d/helm-stable-debian.list
    apt-get update
@@ -563,7 +563,7 @@ install_cni_cilium()
 {
    log_info "Installing CNI - Cilium"
 
-   VERSION_CILIUM_STABLE=$(curl -s https://raw.githubusercontent.com/cilium/cilium/main/stable.txt)
+   VERSION_CILIUM_STABLE=$(curl -fsSL https://raw.githubusercontent.com/cilium/cilium/main/stable.txt)
    API_SERVER_PORT=6443
 
    helm repo add cilium https://helm.cilium.io/
@@ -576,7 +576,7 @@ install_cni_cilium()
       #  --set clusterPoolIPv4PodCIDRList=${ARG_POD_NETWORK_CIDR} \
 
    log_info "Installing Cilium cli - /usr/local/bin/cilium"
-   curl -L --remote-name-all https://github.com/cilium/cilium-cli/releases/latest/download/cilium-linux-amd64.tar.gz{,.sha256sum}
+   curl -fsSL --remote-name-all https://github.com/cilium/cilium-cli/releases/latest/download/cilium-linux-amd64.tar.gz{,.sha256sum}
    sha256sum --check cilium-linux-amd64.tar.gz.sha256sum \
       && tar xzvfC cilium-linux-amd64.tar.gz /usr/local/bin \
       && rm cilium-linux-amd64.tar.gz{,.sha256sum}
@@ -652,8 +652,9 @@ cat << EOF
 
    To join other nodes in the cluster you must install the same version of kubernetes.
    To do that you can run this on them :
-      1. ${THIS_PROGRAM}    -Without --init or --prod
-      2. kubeadm --join     - Please scroll-up (Ctrl+Shit Arrow-up) to see args to use
+      1. bash ${THIS_PROGRAM} --cni ${ARG_CNI} ${VERSION_TO_INSTALL%.*}
+      2. kubeadm --join <args>
+      Please scroll-up (Ctrl+Shit Arrow-up) to see args to use.
 
    Have good time with Kubernetes.
 
