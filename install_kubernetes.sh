@@ -191,7 +191,7 @@ parse_args()
       esac
    done
 
-   # Set defaut values if not parsed
+   # Set default values
    ARG_OLDER_K8S_VERSIONS=${ARG_OLDER_K8S_VERSIONS:-no}
    ARG_LATEST=${ARG_LATEST:-no}
    ARG_SKIP_HELM=${ARG_SKIP_HELM:-no}
