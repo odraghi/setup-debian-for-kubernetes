@@ -1,6 +1,11 @@
 # setup-debian-for-kubernetes
 
 ## Description
+This script help you to quickly setup a kubernetes cluster an Debian12.
+
+- PHASE1: Install Kubernetes and prerequisites
+- PHASE2: Initialize a cluster
+- PHASE3: Join other node
 
 ## PHASE1: Install Kubernetes and prerequisites
 Setup Debian12 with prerequisites to run kubernetes.
@@ -43,16 +48,16 @@ The script install those packages:
 - kubernetes (repo: https://apt.kubernetes.io/ )
 - containerd (repo: Debian official)
 - heml (repo: Debian official)
-- heml (repo: Debian official)
+- openvswitch-switch (repo: Debian official) (when cni is antrea)
 
 
-## Launch
+## Launch on the first controller node
 As root
 ```
 root@control-01:~# bash install_kubernetes.sh
 ```
 
-Or as un-privileged user debian
+Or as un-privileged user
 ```
 debian@control-01:~$ sudo bash install_kubernetes.sh
 ```
