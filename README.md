@@ -1,7 +1,7 @@
 # setup-debian-for-kubernetes
 
 ## Description
-This script help you to quickly setup a kubernetes cluster an Debian12.
+This script help you to quickly setup a kubernetes cluster on Debian12 or Ubuntu22.
 
 - PHASE1: Install Kubernetes and prerequisites
 - PHASE2: Initialize a cluster
@@ -46,9 +46,9 @@ If you want to add to your cluster you need to:
 ## Installed packages
 The script install those packages:
 - kubernetes (repo: https://apt.kubernetes.io/ )
-- containerd (repo: Debian official)
-- heml (repo: Debian official)
-- openvswitch-switch (repo: Debian official) (when cni is antrea)
+- containerd (repo: of the distrib)
+- heml (repo: of the distrib)
+- openvswitch-switch (repo: of the distrib) (when cni is antrea)
 
 
 ## Launch on the first controller node
@@ -57,9 +57,9 @@ As root
 root@control-01:~# bash install_kubernetes.sh
 ```
 
-Or as un-privileged user
+Or as an un-privileged user
 ```
-debian@control-01:~$ sudo bash install_kubernetes.sh
+user@control-01:~$ sudo bash install_kubernetes.sh
 ```
 
 ### Chose your version of Kubernetes
