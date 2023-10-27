@@ -9,7 +9,7 @@ QUANTITY_OF_K8S_VERSIONS=5
 QUANTITY_OF_CPU_MIN=2
 QUANTITY_OF_MEMORY_GB_MIN=2
 
-THIS_PROGRAM_VERSION=2.0.0
+THIS_PROGRAM_VERSION=2.2.0
 THIS_PROGRAM=$0
 
 copyright()
@@ -280,13 +280,13 @@ setup_kubernetes_repo()
 {
    if [ ! -f /etc/apt/sources.list.d/kubernetes.list ] ; then
       log_info "Setup Kubernetes Official Repository"
-      apt-get install -y apt-transport-https ca-certificates curl gpg
+      apt-get -q -y install apt-transport-https ca-certificates curl gpg
 
       [ ! -d /etc/apt/keyrings ] && mkdir -m 755 /etc/apt/keyrings
       curl -fsSL https://dl.k8s.io/apt/doc/apt-key.gpg | gpg --dearmor --yes -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg
       echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" \
          | tee /etc/apt/sources.list.d/kubernetes.list
-      apt-get update
+      apt-get -q update
    fi
 }
 
@@ -427,7 +427,7 @@ is_containerd_installed()
 install_containerd()
 {
    log_info "Installing Containerd"
-   apt-get install -y containerd
+   apt-get -q -y install containerd
    apt-mark hold containerd
 }
 
@@ -485,8 +485,8 @@ install_helm()
    curl -fsSL https://baltocdn.com/helm/signing.asc | gpg --dearmor --yes -o /usr/share/keyrings/helm.gpg
    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" \
          | tee /etc/apt/sources.list.d/helm-stable-debian.list
-   apt-get update
-   apt-get install -y helm
+   apt-get -q update
+   apt-get -q -y install helm
 }
 
 add_some_helm_repo()
@@ -605,13 +605,19 @@ fatal_error()
    exit 2
 }
 
-## Main
+this_script_prerequisites()
+{
+   is_debian_package_installed curl || apt-get -q -y install curl
+   is_debian_package_installed gpg || apt-get -q -y install gpg
+}
 
+## Main
+this_script_prerequisites
 parse_args $*
 
 is_debian12 || fatal_error "This script is only tested for Debian12"
 
-[ ! is_kubernetes_repo_exist ] && setup_kubernetes_repo || apt-get update
+is_kubernetes_repo_exist && apt-get -q update || setup_kubernetes_repo
 
 select_kubernetes_version
 log_info "Installing kubernetes ${VERSION_TO_INSTALL}"
