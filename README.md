@@ -8,7 +8,7 @@ This script help you to quickly setup a kubernetes cluster on Debian12 or Ubuntu
 - PHASE3: Join other node
 
 ## PHASE1: Install Kubernetes and prerequisites
-Setup Debian12 with prerequisites to run kubernetes.
+Setup the operating system with prerequisites to run kubernetes.
 
 The script follow kubernetes prerequisites :
 - https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
