@@ -9,7 +9,7 @@ QUANTITY_OF_K8S_VERSIONS=5
 QUANTITY_OF_CPU_MIN=2
 QUANTITY_OF_MEMORY_GB_MIN=2
 
-THIS_PROGRAM_VERSION=2.2.0
+THIS_PROGRAM_VERSION=2.3.0
 THIS_PROGRAM=$0
 
 copyright()
@@ -79,6 +79,9 @@ OPTIONS: FOR KUBERNETES VERSION
 
      --older         Allow older version of available Kubernetes version.
                      By default you can only install one of the ${QUANTITY_OF_K8S_VERSIONS} latest versions.
+                     Be carefull that version older than Kubernetes 1.24 are probably not working.
+                     (Because of the compatibility with containerd versions 1.6 lts or 1.7 )
+
 
 OPTIONS: FOR ADDITIONAL TOOLS
 
@@ -264,6 +267,11 @@ is_debian12()
    return $(grep -q "Debian GNU/Linux 12" /etc/issue)
 }
 
+is_ubuntu22()
+{
+   return $(grep -q "Ubuntu 22" /etc/issue)
+}
+
 is_debian_package_installed()
 {
    PACKAGE_NAME=$1
@@ -416,7 +424,7 @@ disable_swap()
    SWAP_DEVICES=$(systemctl --type swap --all | grep swap | sed "s/.*\(dev-[^\.]*\.swap\).*/\1/")
    for DEVICE in ${SWAP_DEVICES} ; do systemctl mask ${DEVICE}; done
    log_info "Swap devices need to be masked with systemctl"
-   systemctl --type swap --all
+   systemctl --type swap --all --no-pager
 }
 
 is_containerd_installed()
@@ -445,6 +453,7 @@ is_containerd_configured_for_kubernetes()
 
 setup_containerd()
 {
+   [ ! -d /etc/containerd ] && mkdir /etc/containerd
    [ ! -f /etc/containerd/config.toml.debian ] \
       && log_info "Save debian config file. /etc/containerd/config.toml" \
       && cp -p /etc/containerd/config.toml{,.debian}
@@ -462,6 +471,9 @@ setup_containerd()
    
    log_info "Containerd config - Enable Systemd cgroup driver"
    sed -i "s/^\( *SystemdCgroup =\).*/\1 true/" /etc/containerd/config.toml
+   
+   log_info "Containerd config - Change sandbox_image to version 3.9"
+   sed -i "s/^\( *sandbox_image =\).*/\1 \"registry.k8s.io\/pause:3.9\"/" /etc/containerd/config.toml
 
    service containerd restart
 }
@@ -615,7 +627,7 @@ this_script_prerequisites()
 this_script_prerequisites
 parse_args $*
 
-is_debian12 || fatal_error "This script is only tested for Debian12"
+(is_debian12 || is_ubuntu22) || fatal_error "This script is only tested for Debian12 adn Ubuntu22"
 
 is_kubernetes_repo_exist && apt-get -q update || setup_kubernetes_repo
 
@@ -626,8 +638,8 @@ is_kubernetes_pkg_installed && log_info "kubernetes ${VERSION_TO_INSTALL} are al
 if ! is_kubernetes_pkg_installed; then
    log_info "Need to replace kubernetes packages"
    apt-mark unhold	kubelet kubeadm kubectl
-   apt remove -y	kubelet kubeadm kubectl
-   apt install -y	kubelet=${VERSION_TO_INSTALL} kubeadm=${VERSION_TO_INSTALL} kubectl=${VERSION_TO_INSTALL}
+   apt-get remove -q -y	kubelet kubeadm kubectl
+   apt-get install -q -y	kubelet=${VERSION_TO_INSTALL} kubeadm=${VERSION_TO_INSTALL} kubectl=${VERSION_TO_INSTALL}
    apt-mark hold	kubelet kubeadm kubectl
    link_kubernetes_cni_to_containerd
 fi
