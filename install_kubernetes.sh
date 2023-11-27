@@ -71,7 +71,7 @@ UNATTENDED INITIALIZE CLUSTER
       ${THIS_PROGRAM} --latest --init
       ${THIS_PROGRAM} --older 1.24 --init
 
-      ${THIS_PROGRAM} --latest --init -cni calico --skip-heml
+      ${THIS_PROGRAM} --latest --init --cni calico --skip-heml
 
 OPTIONS: FOR KUBERNETES VERSION
 
@@ -571,6 +571,17 @@ install_cni_antrea()
    helm install antrea antrea/antrea --namespace kube-system
 }
 
+cilium_prerequisites()
+{
+   mkdir /etc/systemd/networkd.conf.d/
+   cat <<EOF | tee /etc/systemd/networkd.conf.d/cilium.conf
+[Network]
+ManageForeignRoutingPolicyRules=no
+ManageForeignRoutes=no
+EOF
+
+}
+
 install_cni_cilium()
 {
    log_info "Installing CNI - Cilium"
@@ -654,6 +665,7 @@ dpkg -l		kubelet kubeadm kubectl
 export_kubeconfig
 
 [ ${ARG_CNI} == antrea ] && antrea_prerequisites
+[ ${ARG_CNI} == cilium ] && cilium_prerequisites
 
 [ ${ARG_INIT_CLUSTER} == no ] && log_info "You are ready to go with : kubeadm" && exit
 
