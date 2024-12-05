@@ -291,9 +291,11 @@ setup_kubernetes_repo()
       apt-get -q -y install apt-transport-https ca-certificates curl gpg
 
       [ ! -d /etc/apt/keyrings ] && mkdir -m 755 /etc/apt/keyrings
-      curl -fsSL https://dl.k8s.io/apt/doc/apt-key.gpg | gpg --dearmor --yes -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg
-      echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" \
+      curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key | gpg --dearmor --yes -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      
+      echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /' \
          | tee /etc/apt/sources.list.d/kubernetes.list
+      
       apt-get -q update
    fi
 }
