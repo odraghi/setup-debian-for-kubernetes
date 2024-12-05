@@ -649,7 +649,9 @@ if ! is_kubernetes_pkg_installed; then
    log_info "Need to replace kubernetes packages"
    apt-mark unhold	kubelet kubeadm kubectl
    apt-get remove -q -y	kubelet kubeadm kubectl
-   apt-get install -q -y	kubelet=${VERSION_TO_INSTALL} kubeadm=${VERSION_TO_INSTALL} kubectl=${VERSION_TO_INSTALL}
+   apt-get install -q -y	kubelet kubeadm kubectl
+   #only one version can be installed because of new pkgs repo
+   #apt-get install -q -y	kubelet=${VERSION_TO_INSTALL} kubeadm=${VERSION_TO_INSTALL} kubectl=${VERSION_TO_INSTALL}
    apt-mark hold	kubelet kubeadm kubectl
    link_kubernetes_cni_to_containerd
 fi
