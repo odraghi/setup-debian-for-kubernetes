@@ -366,7 +366,8 @@ kubernetes_prerequisites()
    is_containerd_installed && log_info "containerd is already installed" || install_containerd
    is_containerd_configured_for_kubernetes && log_info "containerd seems already configured with SystemdCgroup" || setup_containerd
    log_info "You can use contaired as CRI (Container Runtime Interface) for Kubernetes"
-   
+
+   install_cri-tool
    setup_crictl_to_containerd
 
    container_runtimes_prerequisites
@@ -439,6 +440,13 @@ install_containerd()
    log_info "Installing Containerd"
    apt-get -q -y install containerd
    apt-mark hold containerd
+}
+
+install_cri-tools()
+{
+   log_info "Installing cri-tools"
+   apt-get -q -y install cri-tools
+   apt-mark hold cri-tools
 }
 
 setup_crictl_to_containerd()
