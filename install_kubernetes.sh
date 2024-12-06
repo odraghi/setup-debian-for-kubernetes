@@ -272,6 +272,11 @@ is_ubuntu22()
    return $(grep -q "Ubuntu 22" /etc/issue)
 }
 
+is_ubuntu24()
+{
+   return $(grep -q "Ubuntu 24" /etc/issue)
+}
+
 is_debian_package_installed()
 {
    PACKAGE_NAME=$1
@@ -637,7 +642,7 @@ this_script_prerequisites()
 this_script_prerequisites
 parse_args $*
 
-(is_debian12 || is_ubuntu22) || fatal_error "This script is only tested for Debian12 adn Ubuntu22"
+(is_debian12 || is_ubuntu22 || is_ubuntu24) || fatal_error "This script is only tested for Debian12 and Ubuntu 22 & 24"
 
 is_kubernetes_repo_exist && apt-get -q update || setup_kubernetes_repo
 
